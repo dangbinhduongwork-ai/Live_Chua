@@ -102,6 +102,11 @@ body.obs-clean .ui-layer {
 }
 body.obs-clean #obs-toggle-pill {
   display: block;
+  opacity: 0.2;
+  transition: opacity 0.25s ease;
+}
+body.obs-clean #obs-toggle-pill:hover {
+  opacity: 1;
 }
 
 /* ==================== HEADER THANH TIÊU ĐỀ ==================== */

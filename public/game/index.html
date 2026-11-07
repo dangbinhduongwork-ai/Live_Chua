@@ -19,10 +19,10 @@
   <!-- Socket.IO Client được phục vụ tự động bởi server.js -->
   <script src="/socket.io/socket.io.js"></script>
 </head>
-<body>
+<body class="obs-clean">
   <div id="app-container">
-    <!-- Nút hiển thị lại giao diện khi streamer ở chế độ OBS Sạch -->
-    <button id="obs-toggle-pill">👁️ Mở Bảng Điều Khiển</button>
+    <!-- Nút hiển thị lại giao diện khi streamer ở chế độ OBS Sạch (hoặc nhấn phím O) -->
+    <button id="obs-toggle-pill" title="Nhấn hoặc bấm phím O để hiện/ẩn bảng điều khiển">👁️ Mở Bảng Điều Khiển</button>
 
     <!-- Khung hiển thị Canvas 3D (Mặc định tỉ lệ 9:16 Livestream dọc cho TikTok / OBS / Mobile) -->
     <div id="canvas-viewport" class="stream-mode-9-16">
