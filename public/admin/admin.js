@@ -459,9 +459,15 @@ document.querySelectorAll('.btn-like-count').forEach((btn) => {
 // Viewer Leave Simulation ("Out Phòng Live" - subtracts viewer count, keeps coins & likes)
 if (btnSimLeave) {
   btnSimLeave.addEventListener('click', () => {
-    const userId = simUserId.value.trim() || 'nguyenvana_01';
+    let userId = simUserId.value.trim();
     const nickname = simNickname.value.trim() || 'Người Xem';
+    if (!userId && Array.isArray(allPlayers)) {
+      const match = allPlayers.find((p) => p.nickname === nickname || p.userId === nickname);
+      if (match) userId = match.userId;
+    }
+    if (!userId) userId = 'nguyenvana_01';
     socket.emit('admin:simulate_leave', { userId, nickname });
+    addLog('status', `[LEAVE] Đã phát sự kiện Out phòng: ${nickname} (${userId})`);
   });
 }
 

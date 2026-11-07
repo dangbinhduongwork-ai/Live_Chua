@@ -515,27 +515,28 @@ class TikTokHandler {
   handleMemberLeave(data) {
     if (!data) return null;
     const userId = typeof data === 'string' ? data : String(data.userId || data.user?.id || '');
-    if (!userId) return null;
+    const nickname = typeof data === 'object' ? String(data.nickname || data.user?.nickname || '') : '';
+    if (!userId && !nickname) return null;
 
-    const res = stateManager.setPlayerOffline(userId);
-    if (!res) return null;
+    const lookupKey = userId || nickname;
+    const res = stateManager.setPlayerOffline(lookupKey);
+    const resolvedPlayer = res ? res.player : { userId: lookupKey, nickname: nickname || lookupKey };
 
     const payload = {
-      userId: res.player.userId,
-      nickname: res.player.nickname,
-      avatarUrl: res.player.avatarUrl,
-      coins: res.player.coins,
-      likes: res.player.likes,
-      chatsCount: res.player.chatsCount,
-      wasOnline: res.wasOnline,
+      userId: resolvedPlayer.userId || lookupKey,
+      nickname: resolvedPlayer.nickname || nickname || lookupKey,
+      avatarUrl: resolvedPlayer.avatarUrl || '',
+      coins: resolvedPlayer.coins || 0,
+      likes: resolvedPlayer.likes || 0,
+      chatsCount: resolvedPlayer.chatsCount || 0,
+      wasOnline: res ? res.wasOnline : true,
       onlineCount: stateManager.getOnlineCount(),
       timestamp: Date.now()
     };
 
-    if (res.wasOnline) {
-      this.emitEvent('member_leave', payload);
-    }
-    return res.player;
+    // Luôn phát sự kiện member_leave để client Game 3D làm mờ và xóa nhân vật ngay lập tức
+    this.emitEvent('member_leave', payload);
+    return resolvedPlayer;
   }
 
   getStatus() {

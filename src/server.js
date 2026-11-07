@@ -123,6 +123,50 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true, message: 'Đã thiết lập lại dữ liệu phiên live.' });
 });
 
+// Vietnamese TTS Proxy with In-Memory Cache for Incense Blessings
+const ttsCache = new Map();
+app.get('/api/tts', async (req, res) => {
+  try {
+    const rawText = String(req.query.text || '').trim().slice(0, 200);
+    if (!rawText) {
+      return res.status(400).send('Missing text');
+    }
+
+    if (ttsCache.has(rawText)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(ttsCache.get(rawText));
+    }
+
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${encodeURIComponent(rawText)}`;
+    const response = await fetch(ttsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      return res.status(502).send('TTS upstream error');
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (ttsCache.size > 120) {
+      const firstKey = ttsCache.keys().next().value;
+      ttsCache.delete(firstKey);
+    }
+    ttsCache.set(rawText, buffer);
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(buffer);
+  } catch (err) {
+    console.error('[TTS Proxy Error]:', err.message);
+    res.status(500).send('TTS error');
+  }
+});
+
 // Snappy debounced broadcast of player updates (120ms for fast feedback)
 let updatePlayersTimeout = null;
 function broadcastPlayerUpdates() {
@@ -422,14 +466,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('admin:simulate_leave', (data) => {
-    if (data && data.userId) {
-      tiktokHandler.handleMemberLeave(data.userId);
+    if (data) {
+      tiktokHandler.handleMemberLeave(data);
+      broadcastPlayerUpdates();
     }
   });
 
   socket.on('admin:player_leave', (data) => {
-    if (data && data.userId) {
-      tiktokHandler.handleMemberLeave(data.userId);
+    if (data) {
+      tiktokHandler.handleMemberLeave(data);
+      broadcastPlayerUpdates();
     }
   });
 

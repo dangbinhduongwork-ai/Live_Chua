@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CHÙA THIÊNG LIÊNG - Không Gian Chùa 3D Tam Thế Phật</title>
+  <link rel="stylesheet" href="temple.css">
+
+  <!-- Three.js Import Map (Tự lưu trữ cục bộ trong dự án, đảm bảo chạy 100% không phụ thuộc mạng ngoài) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three.module.js",
+      "three/addons/": "./libs/"
+    }
+  }
+  </script>
+
+  <!-- Socket.IO Client được phục vụ tự động bởi server.js -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div id="app-container">
+    <!-- Nút hiển thị lại giao diện khi streamer ở chế độ OBS Sạch -->
+    <button id="obs-toggle-pill">👁️ Mở Bảng Điều Khiển</button>
+
+    <!-- Khung hiển thị Canvas 3D (Mặc định tỉ lệ 9:16 Livestream dọc cho TikTok / OBS / Mobile) -->
+    <div id="canvas-viewport" class="stream-mode-9-16">
+      <!-- 1. GÓC GẦN TRÊN BÊN TRÁI MÀN HÌNH LIVE: BẢNG VÀNG CÔNG ĐỨC & THÔNG BÁO TẶNG XU BÊN DƯỚI -->
+      <div id="temple-stats-panel" class="temple-stats-translucent">
+        <!-- BẢNG VÀNG CÔNG ĐỨC -->
+        <div class="stats-card leaderboard-card">
+          <div class="card-header">
+            <span class="card-icon">🏆</span>
+            <div class="card-title-group">
+              <span class="card-title">BẢNG VÀNG CÔNG ĐỨC</span>
+              <span class="card-subtitle">Thí Chủ Gieo Duyên Lành</span>
+            </div>
+          </div>
+          <div id="leaderboard-list" class="leaderboard-container">
+            <div class="empty-donor-notice">Chưa có thí chủ dâng cúng.<br>Gieo duyên lành đầu tiên!</div>
+          </div>
+        </div>
+
+        <!-- KHUNG THÔNG BÁO TẶNG QUÀ / TẶNG XU HIỆN BÊN TRÁI NGAY DƯỚI BẢNG VÀNG CÔNG ĐỨC -->
+        <div id="gift-banner-container"></div>
+      </div>
+
+      <!-- 2. GÓC GẦN TRÊN BÊN PHẢI MÀN HÌNH LIVE: BẢNG ICON THỈNH LỜI CHÚC -->
+      <div id="live-blessing-panel" class="live-blessing-translucent">
+        <div class="stats-card blessing-card">
+          <div class="card-header">
+            <span class="card-icon">🙏</span>
+            <div class="card-title-group">
+              <span class="card-title">THỈNH LỜI CHÚC</span>
+              <span class="card-subtitle">Tặng Quà Nhận Lời Chúc</span>
+            </div>
+          </div>
+          <div class="blessing-list">
+            <div class="blessing-item" data-category="gia_dinh" data-gift="TikTok" title="Nhấn để thử lời chúc Gia Đình">
+              <span class="gift-sprite gift-sprite-tiktok"></span>
+              <div class="blessing-text-col">
+                <span class="blessing-wish-name">Cầu Gia Đình</span>
+                <span class="blessing-gift-sub">TikTok • <span class="tt-coin-mini">♪</span>1</span>
+              </div>
+            </div>
+            <div class="blessing-item" data-category="su_nghiep" data-gift="Đỉnh" title="Nhấn để thử lời chúc Sự Nghiệp">
+              <span class="gift-sprite gift-sprite-dinh"></span>
+              <div class="blessing-text-col">
+                <span class="blessing-wish-name">Cầu Sự Nghiệp</span>
+                <span class="blessing-gift-sub">Đỉnh • <span class="tt-coin-mini">♪</span>1</span>
+              </div>
+            </div>
+            <div class="blessing-item" data-category="tinh_yeu" data-gift="Yêu bạn" title="Nhấn để thử lời chúc Tình Yêu">
+              <span class="gift-sprite gift-sprite-yeuban"></span>
+              <div class="blessing-text-col">
+                <span class="blessing-wish-name">Cầu Tình Yêu</span>
+                <span class="blessing-gift-sub">Yêu bạn • <span class="tt-coin-mini">♪</span>1</span>
+              </div>
+            </div>
+            <div class="blessing-item" data-category="hoc_hanh" data-gift="GG" title="Nhấn để thử lời chúc Học Hành">
+              <span class="gift-sprite gift-sprite-gg"></span>
+              <div class="blessing-text-col">
+                <span class="blessing-wish-name">Cầu Học Hành</span>
+                <span class="blessing-gift-sub">GG • <span class="tt-coin-mini">♪</span>1</span>
+              </div>
+            </div>
+            <div class="blessing-item" data-category="binh_an" data-gift="Hoa hồng" title="Nhấn để thử lời chúc Bình An">
+              <span class="gift-sprite gift-sprite-hoahong"></span>
+              <div class="blessing-text-col">
+                <span class="blessing-wish-name">Cầu Bình An</span>
+                <span class="blessing-gift-sub">Hoa hồng • <span class="tt-coin-mini">♪</span>1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lớp phủ Giao diện Tương tác (UI Overlay) -->
+    <div class="ui-layer">
+      <!-- HEADER TIÊU ĐỀ & THỐNG KÊ -->
+      <div class="temple-header">
+        <div class="temple-title-box">
+          <div class="temple-name">
+            <span>🪷</span>
+            <span>CHÙA THIÊNG LIÊNG</span>
+          </div>
+          <div class="temple-sub">ĐIỆN TAM THẾ PHẬT • THÀNH KÍNH DÂNG HƯƠNG</div>
+        </div>
+
+        <div class="live-stats-box">
+          <div id="live-status-pill" class="stat-pill live-status">
+            <div class="pulse-dot"></div>
+            <span id="live-status-text">Đang Kết Nối...</span>
+          </div>
+          <div class="stat-pill">
+            <span>👥</span>
+            <span id="viewer-count-text">0 Phật tử</span>
+          </div>
+          <div class="stat-pill">
+            <span>🙏</span>
+            <span>Công Đức: <b id="merit-counter-text" class="merit-counter">0</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHUNG HIỂN THỊ SỚ CẦU AN / BÌNH LUẬN TRÔI -->
+      <div class="prayer-stream-container" id="prayer-stream">
+        <div class="prayer-tag">
+          <span class="prayer-user">Chùa Thiêng Liêng:</span> Nam Mô Bản Sư Thích Ca Mâu Ni Phật. Chúc quý phật tử vạn sự bình an!
+        </div>
+      </div>
+
+      <!-- TOOLTIP THÔNG TIN BỒ ĐOÀN KHI CLICK TRONG 3D -->
+      <div id="cushion-info-popup"></div>
+
+      <!-- FOOTER THANH ĐIỀU KHIỂN & HÀNH LỄ -->
+      <div class="temple-footer">
+        <div class="action-bar-primary">
+          <button class="action-btn" id="btn-bell" title="Thỉnh Chuông Đại Hồng Chung">
+            <span>🔔</span>
+            <span class="label">Thỉnh Chuông</span>
+          </button>
+          <button class="action-btn" id="btn-woodblock" title="Gõ Mõ Tụng Kinh">
+            <span>🪵</span>
+            <span class="label">Gõ Mõ</span>
+          </button>
+          <button class="action-btn" id="btn-incense" title="Thành Kính Dâng Hương">
+            <span>🪷</span>
+            <span class="label">Dâng Hương</span>
+          </button>
+          <button class="action-btn" id="btn-candle" title="Thắp Nến Cầu Nguyện">
+            <span>🕯️</span>
+            <span class="label">Thắp Nến</span>
+          </button>
+          <button class="action-btn" id="btn-open-prayer" title="Dâng Lời Nguyện Lên Chư Phật">
+            <span>📜</span>
+            <span class="label">Dâng Sớ Cầu An</span>
+          </button>
+          <button class="action-btn" id="btn-pray" title="Quỳ Lạy / Tọa Thiền Trước Án Phật">
+            <span>🧘</span>
+            <span class="label">Lạy Phật</span>
+          </button>
+          <button class="action-btn" id="btn-music" title="Bật Nhạc Thiền Tĩnh Tâm 432Hz">
+            <span>🎵</span>
+            <span class="label">Nhạc Thiền 432Hz</span>
+          </button>
+        </div>
+
+        <div class="action-bar-secondary">
+          <button id="btn-toggle-stream" class="sub-btn">📐 Tỉ Lệ: 9:16 Live</button>
+          <button id="btn-toggle-obs" class="sub-btn" title="Ẩn giao diện cho Streamer livestream vào OBS Studio">👁️ Chế Độ OBS</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DÂNG SỚ CẦU AN / CẦU PHÚC -->
+  <div id="prayer-modal" class="modal-overlay">
+    <div class="prayer-scroll-modal">
+      <button id="btn-close-prayer" class="modal-close-btn">&times;</button>
+      <div class="modal-header">
+        <h2 class="modal-title">DÂNG SỚ CẦU AN</h2>
+        <div style="font-size:11px; color:#f3c77d; margin-top:4px;">Thành tâm dâng nén tâm hương lên Tam Bảo</div>
+      </div>
+
+      <form id="prayer-form">
+        <div class="form-group">
+          <label for="prayer-name">Họ và Tên / Pháp Danh Thí Chủ:</label>
+          <input type="text" id="prayer-name" placeholder="Ví dụ: Nguyễn Văn An (Pháp danh Diệu Tâm)" required>
+        </div>
+
+        <div class="form-group">
+          <label for="prayer-type">Nguyện Cầu Ý Nguyện:</label>
+          <select id="prayer-type">
+            <option value="Cầu An">Cầu Gia Đạo Bình An, Vô Tai Vô Nạn</option>
+            <option value="Cầu Sức Khỏe">Cầu Sức Khỏe Dồi Dào, Bách Bệnh Tiêu Trừ</option>
+            <option value="Cầu Tài Lộc">Cầu Công Việc Thuận Lợi, Tài Lộc Hanh Thông</option>
+            <option value="Cầu Trí Tuệ">Cầu Trí Tuệ Sáng Suốt, Thi Cử Đỗ Đạt</option>
+            <option value="Cầu Siêu">Cầu Siêu Cho Cửu Huyền Thất Tổ</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="prayer-wish">Tâm Nguyện Gửi Chư Phật:</label>
+          <textarea id="prayer-wish" rows="3" placeholder="Ghi lời nguyện chân thành từ đáy lòng của quý phật tử..."></textarea>
+        </div>
+
+        <button type="submit" class="modal-submit-btn">
+          <span>🪷</span>
+          <span>DÂNG LỜI NGUYỆN LÊN CHƯ PHẬT</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Nạp file logic điều khiển chính của Chùa 3D -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>
+

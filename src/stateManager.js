@@ -141,8 +141,30 @@ class StateManager {
    * Decreases active interactive viewer count, while preserving 100% of their coins, likes, and chat history.
    */
   setPlayerOffline(userId) {
-    const player = this.players.get(String(userId));
-    if (!player) return null;
+    if (!userId) return null;
+    let player = this.players.get(String(userId));
+    if (!player) {
+      for (const p of this.players.values()) {
+        if (p.nickname === String(userId) || p.userId === String(userId)) {
+          player = p;
+          break;
+        }
+      }
+    }
+    if (!player) {
+      return {
+        player: {
+          userId: String(userId),
+          nickname: String(userId),
+          avatarUrl: '',
+          coins: 0,
+          likes: 0,
+          chatsCount: 0,
+          isOnline: false
+        },
+        wasOnline: false
+      };
+    }
     const wasOnline = player.isOnline !== false;
     player.isOnline = false;
     player.leftAt = new Date().toISOString();
