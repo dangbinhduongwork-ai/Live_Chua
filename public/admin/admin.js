@@ -5,7 +5,11 @@
  * Trung tâm tiếp nhận và quản trị toàn diện dữ liệu Live Stream TikTok.
  */
 
-const socket = io();
+const socket = io({
+  reconnection: true,
+  reconnectionDelay: 3000,
+  reconnectionDelayMax: 3000
+});
 
 // DOM Elements: Header & Status
 const statTiktokStatus = document.getElementById('statTiktokStatus');
@@ -238,9 +242,9 @@ btnDisconnectTikTok.addEventListener('click', () => {
   btnDisconnectTikTok.disabled = true;
   btnConnectTikTok.disabled = false;
   socket.emit('admin:tiktok_disconnect');
-  updateTikTokBadge('disconnected', 'Đã dừng kết nối (Giữ nguyên dữ liệu)');
+  updateTikTokBadge('disconnected', 'Đã ngắt kết nối (Đã tắt tự động kết nối lại)');
   updateViewerCountDisplay(0);
-  addLog('status', '[STOPPED] Đã dừng hẳn phiên live. Toàn bộ dữ liệu khán giả và quà tặng được lưu giữ.');
+  addLog('status', '[STOPPED] Đã chủ động ngắt kết nối phiên live. Dừng tự động kết nối lại.');
 });
 
 if (btnQuickClearData) {
@@ -256,9 +260,13 @@ function handleTikTokStatusUpdate(data) {
   if (typeof data.viewerCount === 'number') {
     updateViewerCountDisplay(data.viewerCount);
   }
+  if (data.username && tiktokUsernameInput && !tiktokUsernameInput.value.trim()) {
+    tiktokUsernameInput.value = data.username;
+  }
 
   const isConnected = data.isConnected === true || data.status === 'connected';
-  const isConnecting = data.isConnecting === true || data.status === 'connecting' || data.status === 'reconnecting';
+  const isAutoReconnecting = data.autoReconnecting === true || data.status === 'reconnecting';
+  const isConnecting = data.isConnecting === true || data.status === 'connecting' || isAutoReconnecting;
 
   if (isConnected) {
     const channelName = data.username ? `@${data.username}` : '';
@@ -268,9 +276,12 @@ function handleTikTokStatusUpdate(data) {
     btnConnectTikTok.disabled = true;
     btnDisconnectTikTok.disabled = false;
   } else if (isConnecting) {
-    updateTikTokBadge('connecting', data.message || 'Đang kết nối...');
-    if (statTiktokStatus) statTiktokStatus.innerText = 'Đang kết nối...';
-    btnConnectTikTok.disabled = true;
+    updateTikTokBadge('connecting', data.message || 'Đang tự động kết nối lại sau 3s...');
+    if (statTiktokStatus) {
+      statTiktokStatus.innerText = isAutoReconnecting ? 'Tự kết nối lại (3s)...' : 'Đang kết nối...';
+    }
+    // Cho phép ấn Ngắt bất cứ lúc nào để dừng vòng lặp tự động kết nối lại 3s
+    btnConnectTikTok.disabled = !isAutoReconnecting;
     btnDisconnectTikTok.disabled = false;
   } else {
     updateTikTokBadge('disconnected', data.message || 'Chưa kết nối');
