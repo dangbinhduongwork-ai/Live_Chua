@@ -1541,7 +1541,206 @@ export class TempleScene {
       devotee.setDevoteeOpacity(devotee.userData.fadeOpacity ?? 1.0);
     };
 
+    // Helper bật/tắt Hiệu Ứng May Mắn Lấp Lánh (dành cho Phật tử cúng dường từ 2 Xu trở lên lúc dâng hương)
+    devotee.setLuckyAura = (enabled, coins = 2) => {
+      if (!enabled) {
+        if (devotee.userData.luckyAura) {
+          devotee.remove(devotee.userData.luckyAura.group);
+          devotee.userData.luckyAura = null;
+        }
+        return;
+      }
+      if (!devotee.userData.luckyAura) {
+        const aura = this.createLuckySparkleAura(coins);
+        devotee.add(aura.group);
+        devotee.userData.luckyAura = aura;
+      }
+    };
+
     return devotee;
+  }
+
+  /**
+   * Tạo Hiệu Ứng Hào Quang May Mắn Lấp Lánh Bao Quanh Phật Tử (Khi cúng dường >= 2 Xu lúc dâng hương)
+   * Gồm: Vòng pháp luân cát tường dưới chân, luồng sao vàng lấp lánh xoáy quanh người,
+   * các ngôi sao bảo châu 3D nhấp nháy và hào quang phước lộc rực rỡ.
+   */
+  createLuckySparkleAura() {
+    const group = new THREE.Group();
+    group.position.set(0, 0, 0);
+
+    // 1. Vòng Pháp Luân Cát Tường phát sáng xoay dưới chân
+    const floorRingGroup = new THREE.Group();
+    floorRingGroup.position.y = 0.03;
+
+    const outerRingMat = new THREE.MeshBasicMaterial({
+      color: 0xffdf33,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const outerRing = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.58, 36), outerRingMat);
+    outerRing.rotation.x = -Math.PI / 2;
+    floorRingGroup.add(outerRing);
+
+    const innerRingMat = new THREE.MeshBasicMaterial({
+      color: 0xfff59d,
+      transparent: true,
+      opacity: 0.75,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.35, 32), innerRingMat);
+    innerRing.rotation.x = -Math.PI / 2;
+    floorRingGroup.add(innerRing);
+
+    // 8 cánh sen vàng cát tường quanh vòng hào quang chân
+    const petalGeo = new THREE.ConeGeometry(0.08, 0.22, 4);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const petal = new THREE.Mesh(petalGeo, outerRingMat);
+      petal.position.set(Math.cos(angle) * 0.56, 0.01, Math.sin(angle) * 0.56);
+      petal.rotation.x = Math.PI / 2;
+      petal.rotation.z = -angle - Math.PI / 2;
+      floorRingGroup.add(petal);
+    }
+    group.add(floorRingGroup);
+
+    // 2. Hào quang may mắn tỏa sáng sau lưng
+    const backHaloMat = new THREE.SpriteMaterial({
+      map: this.textures.halo,
+      color: 0xffea70,
+      transparent: true,
+      opacity: 0.62,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const backHalo = new THREE.Sprite(backHaloMat);
+    backHalo.scale.set(1.65, 1.65, 1.0);
+    backHalo.position.set(0, 0.55, 0);
+    group.add(backHalo);
+
+    // 3. Cột hạt Bụi Sao May Mắn Lấp Lánh (64 hạt kim tuyến vàng xoáy ốc bay lên quanh thân)
+    const count = 64;
+    const positions = new Float32Array(count * 3);
+    const phases = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 6;
+      const radius = 0.36 + (i % 5) * 0.07;
+      const y = (i / count) * 1.45;
+      positions[i * 3] = Math.cos(angle) * radius;
+      positions[i * 3 + 1] = y;
+      positions[i * 3 + 2] = Math.sin(angle) * radius;
+      phases.push({
+        baseAngle: angle,
+        radius,
+        yOffset: y,
+        speed: 1.8 + (i % 4) * 0.35
+      });
+    }
+    const sparkleGeo = new THREE.BufferGeometry();
+    sparkleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const sparkleMat = new THREE.PointsMaterial({
+      map: this.textures.sparkle,
+      size: 0.42,
+      color: 0xfff066,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false
+    });
+    const sparklePoints = new THREE.Points(sparkleGeo, sparkleMat);
+    group.add(sparklePoints);
+
+    // 4. 10 Ngôi Sao Lấp Lánh lớn (Twinkling Star Sprites & Bảo Châu) bay lượn xung quanh vai và đầu
+    const orbitingStars = [];
+    for (let s = 0; s < 10; s++) {
+      const starMat = new THREE.SpriteMaterial({
+        map: this.textures.sparkle,
+        color: s % 2 === 0 ? 0xffffff : 0xffd700,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false
+      });
+      const starSprite = new THREE.Sprite(starMat);
+      const baseScale = 0.26 + (s % 3) * 0.07;
+      starSprite.scale.set(baseScale, baseScale, 1.0);
+      group.add(starSprite);
+      orbitingStars.push({
+        sprite: starSprite,
+        angle: (s / 10) * Math.PI * 2,
+        radius: 0.42 + (s % 3) * 0.11,
+        baseY: 0.22 + (s / 10) * 0.95,
+        speed: 2.2 + (s % 3) * 0.4,
+        baseScale,
+        seed: s * 1.3
+      });
+    }
+
+    // 5. Ánh sáng vàng kim may mắn chiếu sáng rực rỡ nhân vật
+    const auraLight = new THREE.PointLight(0xffd700, 2.4, 3.6, 1.6);
+    auraLight.position.set(0, 0.65, 0);
+    group.add(auraLight);
+
+    return {
+      group,
+      floorRingGroup,
+      backHalo,
+      sparkleGeo,
+      phases,
+      orbitingStars,
+      auraLight
+    };
+  }
+
+  updateLuckyAura(aura, delta, elapsedTime) {
+    if (!aura) return;
+
+    // Xoay vòng pháp luân dưới chân
+    if (aura.floorRingGroup) {
+      aura.floorRingGroup.rotation.y += delta * 1.8;
+      const pulse = 1.0 + Math.sin(elapsedTime * 5.0) * 0.06;
+      aura.floorRingGroup.scale.set(pulse, 1.0, pulse);
+    }
+
+    // Nhịp thở hào quang sau lưng
+    if (aura.backHalo) {
+      const haloScale = 1.6 + Math.sin(elapsedTime * 4.0) * 0.15;
+      aura.backHalo.scale.set(haloScale, haloScale, 1.0);
+    }
+
+    // Xoáy ốc hạt kim tuyến may mắn bay lên liên tục
+    if (aura.sparkleGeo && aura.phases) {
+      const posArr = aura.sparkleGeo.attributes.position.array;
+      for (let i = 0; i < aura.phases.length; i++) {
+        const p = aura.phases[i];
+        const curAngle = p.baseAngle + elapsedTime * p.speed;
+        const curY = ((p.yOffset + elapsedTime * 0.55) % 1.45);
+        const fadeRadius = p.radius * (1.0 + Math.sin(elapsedTime * 3 + i) * 0.12);
+        posArr[i * 3] = Math.cos(curAngle) * fadeRadius;
+        posArr[i * 3 + 1] = 0.08 + curY;
+        posArr[i * 3 + 2] = Math.sin(curAngle) * fadeRadius;
+      }
+      aura.sparkleGeo.attributes.position.needsUpdate = true;
+    }
+
+    // Các ngôi sao lớn lấp lánh nhấp nháy quanh người
+    if (aura.orbitingStars) {
+      for (const st of aura.orbitingStars) {
+        const a = st.angle - elapsedTime * st.speed;
+        const y = st.baseY + Math.sin(elapsedTime * 3.5 + st.seed) * 0.12;
+        st.sprite.position.set(Math.cos(a) * st.radius, y, Math.sin(a) * st.radius);
+        // Hiệu ứng nhấp nháy lấp lánh (Twinkle)
+        const twinkle = st.baseScale * (0.65 + 0.55 * Math.abs(Math.sin(elapsedTime * 8.5 + st.seed)));
+        st.sprite.scale.set(twinkle, twinkle, 1.0);
+      }
+    }
   }
 
   /**
@@ -1739,6 +1938,10 @@ export class TempleScene {
     if (this.activeOffering && this.activeOffering.userId === userId) {
       this.activeOffering.deltaCoins = (this.activeOffering.deltaCoins || 0) + deltaCoins;
       this.activeOffering.giftName = giftName;
+      // Nếu cộng dồn combo đạt từ 2 Xu trở lên ngay trong lúc đang dâng hương -> Bật ngay hiệu ứng May Mắn Lấp Lánh
+      if (this.activeOffering.deltaCoins >= 2 && this.activeOffering.devotee && this.activeOffering.devotee.setLuckyAura) {
+        this.activeOffering.devotee.setLuckyAura(true, this.activeOffering.deltaCoins);
+      }
       return;
     }
 
@@ -1784,6 +1987,11 @@ export class TempleScene {
     // Chuyển sang tư thế nâng 3 nén nhang trầm dâng hương
     devotee.setOfferingPose(true);
 
+    // Kích hoạt Hiệu Ứng May Mắn Lấp Lánh bao quanh nếu tặng từ 2 Xu trở lên
+    if (devotee.setLuckyAura) {
+      devotee.setLuckyAura(Number(deltaCoins) >= 2, deltaCoins);
+    }
+
     // Điểm đến: Bồ đoàn Đại Chủ Lễ ở giữa sân dâng hương (z = 2.8)
     const altarTargetPos = new THREE.Vector3(0, 0.06, 2.8);
 
@@ -1813,6 +2021,11 @@ export class TempleScene {
     if (!dev) {
       this.activeOffering = null;
       return;
+    }
+
+    // Cập nhật chuyển động xoay & nhấp nháy của Hiệu Ứng May Mắn Lấp Lánh (nếu người này tặng >= 2 Xu)
+    if (dev.userData.luckyAura) {
+      this.updateLuckyAura(dev.userData.luckyAura, delta, this.elapsedTime);
     }
 
     if (act.phase === 'WALK_TO_ALTAR') {
@@ -1902,8 +2115,11 @@ export class TempleScene {
         dev.position.set(0, 0.06, 0);
         dev.rotation.y = Math.PI;
 
-        // Trở về tư thế chắp búp sen tĩnh tâm
+        // Trở về tư thế chắp búp sen tĩnh tâm & tắt hiệu ứng lấp lánh dâng hương
         dev.setOfferingPose(false);
+        if (dev.setLuckyAura) {
+          dev.setLuckyAura(false);
+        }
 
         // Nếu người này đã out phòng trong lúc dâng hương, bắt đầu làm mờ biến mất
         if (dev.userData.pendingOut) {
