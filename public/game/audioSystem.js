@@ -568,8 +568,8 @@ class TempleAudioSystem {
   }
 
   /**
-   * Đọc Lời Chúc Theo Nguyện Ước (Gia Đình, Sự Nghiệp, Tình Yêu, Học Hành, Bình An) Khi Dâng Hương
-   * Tự động hạ nhẹ âm lượng nhạc nền (audio ducking) để lời chúc nghe rõ ràng, ấm áp và trang nghiêm
+   * Đọc Lời Chúc Ngắn Gọn, Trang Nghiêm Theo Nguyện Ước (~2.5 - 3s, khớp hoàn toàn với nhịp dâng hương)
+   * Tự động hạ nhẹ âm lượng nhạc nền (audio ducking) để lời chúc nghe rõ ràng, không bao giờ bị chồng hay trễ nhịp
    */
   speakBlessing(donorName = 'Phật tử', giftName = '') {
     this.ensureContext();
@@ -580,24 +580,24 @@ class TempleAudioSystem {
 
     const categoryBlessings = {
       gia_dinh: [
-        `Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Cảm tạ Phật tử ${cleanName} đã dâng lễ cầu Gia Đình. Cầu chúc gia đạo thí chủ trên thuận dưới hòa, cha mẹ mạnh khỏe, gia đình sum vầy hạnh phúc.`,
-        `A Di Đà Phật. Chứng minh công đức cầu Gia Đình của thí chủ ${cleanName}. Nguyện cầu Chư Phật gia hộ cho đại gia đình thí chủ luôn bình an, ấm êm, tràn ngập tiếng cười.`
+        `Cảm tạ Phật tử ${cleanName}. Chúc gia đình thí chủ bình an, sum vầy hạnh phúc.`,
+        `A Di Đà Phật. Chúc gia đạo Phật tử ${cleanName} luôn ấm êm, mạnh khỏe.`
       ],
       su_nghiep: [
-        `Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Cảm tạ Phật tử ${cleanName} đã dâng lễ cầu Sự Nghiệp. Cầu chúc thí chủ công danh thăng tiến, sự nghiệp hanh thông, tài lộc dồi dào, vạn sự thành tựu.`,
-        `A Di Đà Phật. Cảm niệm lòng thành cầu Sự Nghiệp của Phật tử ${cleanName}. Chúc thí chủ công việc thuận buồm xuôi gió, quý nhân phù trợ, lộc tài viên mãn.`
+        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ sự nghiệp hanh thông, tài lộc dồi dào.`,
+        `A Di Đà Phật. Chúc Phật tử ${cleanName} công danh thăng tiến, vạn sự thành tựu.`
       ],
       tinh_yeu: [
-        `Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Cảm tạ Phật tử ${cleanName} đã dâng lễ cầu Tình Yêu. Cầu chúc thí chủ tình duyên viên mãn, thiện duyên gắn kết, trăm năm hạnh phúc trọn vẹn.`,
-        `A Di Đà Phật. Hoan hỷ công đức cầu Tình Duyên của Phật tử ${cleanName}. Nguyện cầu thí chủ sớm gặp nhân duyên như ý, đôi lứa yêu thương bền chặt, hạnh phúc viên thành.`
+        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ tình duyên viên mãn, trăm năm hạnh phúc.`,
+        `A Di Đà Phật. Chúc Phật tử ${cleanName} thiện duyên gắn kết, hạnh phúc trọn vẹn.`
       ],
       hoc_hanh: [
-        `Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Cảm tạ Phật tử ${cleanName} đã dâng lễ cầu Học Hành. Cầu chúc thí chủ trí tuệ sáng suốt, học hành tấn tới, thi cử đỗ đạt, bảng vàng vinh quy.`,
-        `A Di Đà Phật. Chứng minh tâm nguyện cầu Học Hành của thí chủ ${cleanName}. Chúc thí chủ tâm trí minh mẫn, vượt qua mọi kỳ thi, đạt kết quả rực rỡ như ý.`
+        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ trí tuệ sáng suốt, thi cử đỗ đạt.`,
+        `A Di Đà Phật. Chúc Phật tử ${cleanName} học hành tấn tới, bảng vàng vinh quy.`
       ],
       binh_an: [
-        `Nam Mô Bổn Sư Thích Ca Mâu Ni Phật. Cảm tạ Phật tử ${cleanName} đã thành kính dâng hương cầu Bình An. Cầu chúc thí chủ thân tâm an lạc, sức khỏe dồi dào, tai qua nạn khỏi, vạn sự bình an.`,
-        `A Di Đà Phật. Chứng minh công đức dâng hương của thí chủ ${cleanName}. Nguyện cầu mười phương Chư Phật gia hộ cho thí chủ tâm thanh tịnh, sở cầu như ý, vạn sự cát tường.`
+        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ thân tâm an lạc, vạn sự bình an.`,
+        `A Di Đà Phật. Chúc Phật tử ${cleanName} sức khỏe dồi dào, vạn sự cát tường.`
       ]
     };
 
@@ -609,12 +609,32 @@ class TempleAudioSystem {
       detail: { donorName: cleanName, blessingText, giftName, category }
     }));
 
-    // Đưa vào hàng đợi đọc (giữ tối đa 3 lời chúc đang chờ để không bị trễ quá lâu)
-    if (this.ttsQueue.length >= 3) {
-      this.ttsQueue.shift();
-    }
-    this.ttsQueue.push(blessingText);
+    // Nếu câu trước vẫn còn đang đọc dở khi người mới đã lên dâng hương, ngắt câu cũ ngay để khớp 100% với người đang dâng hương
+    this.stopCurrentSpeech();
+    this.ttsQueue = [blessingText];
     this.processTtsQueue();
+  }
+
+  stopCurrentSpeech() {
+    this.ttsQueue = [];
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.onended = null;
+        this.currentAudio.onerror = null;
+        this.currentAudio.pause();
+      } catch (e) {
+        // Ignore
+      }
+      this.currentAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {
+        // Ignore
+      }
+    }
+    this.isSpeaking = false;
   }
 
   processTtsQueue() {
@@ -625,7 +645,7 @@ class TempleAudioSystem {
 
     // Hạ nhẹ nhạc nền xuống một chút để giọng đọc lời chúc bình an rõ ràng, truyền cảm
     if (this.ambientGain && this.ctx) {
-      this.ambientGain.gain.setTargetAtTime(0.14, this.ctx.currentTime, 0.25);
+      this.ambientGain.gain.setTargetAtTime(0.14, this.ctx.currentTime, 0.2);
     }
 
     const onFinish = () => {
@@ -633,20 +653,22 @@ class TempleAudioSystem {
       this.currentAudio = null;
       // Khôi phục âm lượng nhạc nền êm dịu
       if (this.ambientGain && this.ctx) {
-        this.ambientGain.gain.setTargetAtTime(0.42, this.ctx.currentTime, 0.5);
+        this.ambientGain.gain.setTargetAtTime(0.42, this.ctx.currentTime, 0.4);
       }
-      setTimeout(() => this.processTtsQueue(), 200);
+      if (this.ttsQueue.length > 0) {
+        setTimeout(() => this.processTtsQueue(), 100);
+      }
     };
 
-    // Ưu tiên phát qua luồng /api/tts tiếng Việt chuẩn giọng tự nhiên (tăng tốc độ đọc nhanh hơn một chút 1.22x)
+    // Ưu tiên phát qua luồng /api/tts tiếng Việt chuẩn giọng tự nhiên (tốc độ 1.28x gọn gàng, trang nghiêm)
     const ttsUrl = `/api/tts?text=${encodeURIComponent(text)}`;
     const audio = new Audio(ttsUrl);
     audio.volume = 0.95;
-    audio.defaultPlaybackRate = 1.22;
-    audio.playbackRate = 1.22;
+    audio.defaultPlaybackRate = 1.28;
+    audio.playbackRate = 1.28;
     if ('preservesPitch' in audio) audio.preservesPitch = true;
     audio.onplay = () => {
-      audio.playbackRate = 1.22;
+      audio.playbackRate = 1.28;
     };
     this.currentAudio = audio;
 
@@ -674,7 +696,7 @@ class TempleAudioSystem {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'vi-VN';
-        utter.rate = 1.18;
+        utter.rate = 1.24;
         utter.pitch = 1.0;
 
         const voices = window.speechSynthesis.getVoices();
@@ -684,13 +706,13 @@ class TempleAudioSystem {
         utter.onend = onDone;
         utter.onerror = onDone;
         window.speechSynthesis.speak(utter);
-        setTimeout(onDone, 9000); // Safety timeout
+        setTimeout(onDone, 4000); // Safety timeout
         return;
       } catch (e) {
         // Ignore
       }
     }
-    setTimeout(onDone, 1000);
+    setTimeout(onDone, 800);
   }
 
   /**

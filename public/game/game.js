@@ -435,7 +435,8 @@ class TempleGameController {
 
   /**
    * Xử lý khi có Quà tặng / Cúng dường (live:gift)
-   * Nhân vật của người đó đi dần lên dâng hương, camera zoom lại gần rồi quay về chỗ cũ
+   * Nhân vật của người đó đi dần lên dâng hương, camera zoom lại gần rồi quay về chỗ cũ.
+   * Khi ấn giữ combo tặng liên tiếp, gộp mượt mà số lượng xu và không spam lặp lại dâng hương hay thông báo.
    */
   handleGiftEvent(data) {
     const userId = data.userId || `gift_${data.nickname}`;
@@ -450,14 +451,20 @@ class TempleGameController {
     this.updateMeritChestUI(this.totalCoins);
     this.updateHeaderPills();
 
-    // Kích hoạt: Nhân vật đi dần lên dâng hương, camera zoom cận cảnh từ đằng sau rồi zoom về
+    // Kích hoạt: Nhân vật đi dần lên dâng hương (tự động gộp nếu người này đang dâng hương hoặc đang trong hàng đợi)
     this.scene.triggerGiftOffering(userId, nickname, deltaCoins, giftName);
 
-    // Thả một đóa hoa đăng sáng rực mang tên người cúng dường
-    this.scene.spawnFloatingLotus(nickname, `Cúng dường ${giftName}`);
+    // Chống spam thả hoa đăng khi ấn giữ combo (mỗi người tối đa 1 hoa đăng mỗi 3.5 giây)
+    if (!this.lastLotusTimeByUser) this.lastLotusTimeByUser = new Map();
+    const now = Date.now();
+    const lastLotus = this.lastLotusTimeByUser.get(userId) || 0;
+    if (now - lastLotus > 3500) {
+      this.lastLotusTimeByUser.set(userId, now);
+      this.scene.spawnFloatingLotus(nickname, `Cúng dường ${giftName}`);
+    }
 
-    // Hiển thị Toast thông báo vinh danh mạ vàng
-    this.showGiftToast(nickname, giftName, deltaCoins, avatarUrl);
+    // Hiển thị hoặc cộng dồn Toast thông báo vinh danh mạ vàng khi ấn giữ combo
+    this.showGiftToast(nickname, giftName, deltaCoins, avatarUrl, userId);
 
     // Nếu server có gửi kèm topPlayers
     if (data.topPlayers) {
@@ -584,11 +591,34 @@ class TempleGameController {
   }
 
   /**
-   * Hiển thị Toast quà tặng sang trọng
+   * Hiển thị Toast quà tặng sang trọng (Tự động gộp cộng dồn số Xu khi cùng 1 người ấn giữ donate liên tục)
    */
-  showGiftToast(nickname, giftName, coins, avatarUrl) {
+  showGiftToast(nickname, giftName, coins, avatarUrl, userId = '') {
     const container = document.getElementById('gift-banner-container');
     if (!container) return;
+
+    if (!this.activeGiftToasts) {
+      this.activeGiftToasts = new Map();
+    }
+
+    const toastKey = `${userId || nickname}_${giftName}`;
+    const existing = this.activeGiftToasts.get(toastKey);
+
+    if (existing && existing.toast && existing.toast.parentNode) {
+      existing.totalCoins += coins;
+      existing.comboCount += 1;
+      const descEl = existing.toast.querySelector('.gift-desc');
+      if (descEl) {
+        const comboBadge = existing.comboCount > 1 ? ` <b>x${existing.comboCount}</b>` : '';
+        descEl.innerHTML = `Thành kính cúng dường <b>${giftName}</b>${comboBadge} (<span class="gift-coins">+${existing.totalCoins} Xu</span>)`;
+      }
+      clearTimeout(existing.timer);
+      existing.timer = setTimeout(() => {
+        if (existing.toast.parentNode) existing.toast.parentNode.removeChild(existing.toast);
+        this.activeGiftToasts.delete(toastKey);
+      }, 4500);
+      return;
+    }
 
     const toast = document.createElement('div');
     toast.className = 'gift-toast';
@@ -607,10 +637,22 @@ class TempleGameController {
 
     container.prepend(toast);
 
-    // Tự động xóa khỏi DOM sau 5 giây
-    setTimeout(() => {
+    // Giới hạn tối đa 3 thông báo trên màn hình để luôn gọn đẹp
+    while (container.children.length > 3) {
+      container.removeChild(container.lastElementChild);
+    }
+
+    const timer = setTimeout(() => {
       if (toast.parentNode) toast.parentNode.removeChild(toast);
-    }, 5000);
+      this.activeGiftToasts.delete(toastKey);
+    }, 4500);
+
+    this.activeGiftToasts.set(toastKey, {
+      toast,
+      totalCoins: coins,
+      comboCount: 1,
+      timer
+    });
   }
 
   /**

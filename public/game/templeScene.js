@@ -1724,7 +1724,10 @@ export class TempleScene {
   }
 
   /**
-   * Khi ai tặng quà: Nhân vật của người đó đi dần lên dâng hương và camera zoom lại gần rồi quay về chỗ cũ
+   * Khi ai tặng quà: Nhân vật của người đó đi dần lên dâng hương và camera zoom lại gần rồi quay về chỗ cũ.
+   * Chống spam tuyệt đối khi người dùng ấn giữ combo hoặc tặng liên tiếp nhiều quà:
+   * - Nếu người đó đang trong quá trình dâng hương, gộp cộng dồn số xu vào lượt hiện tại, không xếp hàng lặp lại.
+   * - Nếu người đó đã có tên trong hàng đợi dâng hương, gộp số xu vào đúng lượt đang chờ.
    */
   triggerGiftOffering(userId, nickname = 'Phật tử', deltaCoins = 1, giftName = 'Hoa Sen') {
     let userObj = this.userCharacters.get(userId);
@@ -1732,8 +1735,26 @@ export class TempleScene {
       userObj = this.ensureUserCharacter(userId, nickname);
     }
 
-    // Nếu đang có người dâng hương, đưa vào hàng đợi
+    // 1. Nếu chính Phật tử này đang bước lên / đang dâng hương / đang bước về -> Gộp combo ngay, KHÔNG xếp hàng trùng
+    if (this.activeOffering && this.activeOffering.userId === userId) {
+      this.activeOffering.deltaCoins = (this.activeOffering.deltaCoins || 0) + deltaCoins;
+      this.activeOffering.giftName = giftName;
+      return;
+    }
+
+    // 2. Nếu Phật tử này đã có trong hàng đợi chờ dâng hương -> Gộp cộng dồn xu vào lượt đang chờ
+    const queuedItem = this.incenseQueue.find(item => item.userId === userId);
+    if (queuedItem) {
+      queuedItem.deltaCoins = (queuedItem.deltaCoins || 0) + deltaCoins;
+      queuedItem.giftName = giftName;
+      return;
+    }
+
+    // 3. Nếu đang có người khác dâng hương, đưa vào hàng đợi (giới hạn tối đa 5 người chờ để không bị trễ nhịp phòng live)
     if (this.activeOffering) {
+      if (this.incenseQueue.length >= 5) {
+        this.incenseQueue.shift();
+      }
       this.incenseQueue.push({ userId, nickname, deltaCoins, giftName, userObj });
       return;
     }
@@ -1769,6 +1790,7 @@ export class TempleScene {
     this.activeOffering = {
       userId,
       nickname,
+      deltaCoins,
       giftName,
       devotee,
       cushion,
@@ -1776,9 +1798,9 @@ export class TempleScene {
       altarTargetPos,
       phase: 'WALK_TO_ALTAR', // 'WALK_TO_ALTAR' -> 'HOLD_OFFERING' -> 'WALK_BACK'
       phaseTimer: 0,
-      walkDuration: 1.8,
-      holdDuration: 3.0,     // Zoom vào dâng hương đúng 3 giây theo yêu cầu
-      walkBackDuration: 1.8,
+      walkDuration: 1.5,
+      holdDuration: 3.0,     // Zoom vào dâng hương 3 giây vừa khít với lời chúc ngắn gọn
+      walkBackDuration: 1.4,
       cameraZoomStarted: false
     };
   }
@@ -1814,8 +1836,8 @@ export class TempleScene {
       dev.position.set(curX, 0.06 + bob, curZ);
       dev.rotation.y = Math.PI; // Hướng mặt về án thờ & Đức Phật
 
-      // Khi đi đến gần bàn thờ, camera zoom lại gần người đó và cất giọng đọc lời chúc bình an
-      if (t > 0.45 && !act.cameraZoomStarted) {
+      // Bắt đầu đọc lời chúc & zoom camera sớm ngay khi bước ra lối giữa (t > 0.2) để đọc xong vừa vặn khi hết 3s dâng hương
+      if (t > 0.20 && !act.cameraZoomStarted) {
         act.cameraZoomStarted = true;
         const zoomInPos = new THREE.Vector3(0, 1.70, 5.7);
         const zoomInLook = new THREE.Vector3(0, 1.85, -1.8);
@@ -1848,7 +1870,9 @@ export class TempleScene {
         }
       }
     } else if (act.phase === 'HOLD_OFFERING') {
-      if (act.phaseTimer >= act.holdDuration) {
+      // Đảm bảo giữ đủ 3s VÀ đợi lời chúc đọc xong hoàn toàn (tối đa 4.2s) mới bước về, không bao giờ để người sau đè lên lời chúc người trước
+      const speechDone = !templeAudio.isSpeaking || act.phaseTimer >= 4.2;
+      if (act.phaseTimer >= act.holdDuration && speechDone) {
         act.phase = 'WALK_BACK';
         act.phaseTimer = 0;
 
