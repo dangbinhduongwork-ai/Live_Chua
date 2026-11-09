@@ -2083,8 +2083,8 @@ export class TempleScene {
         }
       }
     } else if (act.phase === 'HOLD_OFFERING') {
-      // Đảm bảo giữ đủ 3s VÀ đợi lời chúc đọc xong hoàn toàn (tối đa 4.2s) mới bước về, không bao giờ để người sau đè lên lời chúc người trước
-      const speechDone = !templeAudio.isSpeaking || act.phaseTimer >= 4.2;
+      // Đảm bảo giữ đủ 3s VÀ đợi lời chúc đọc xong hoàn toàn (tối đa 4.8s) mới bước về, không bao giờ để người sau đè lên lời chúc người trước
+      const speechDone = !templeAudio.isSpeaking || act.phaseTimer >= 4.8;
       if (act.phaseTimer >= act.holdDuration && speechDone) {
         act.phase = 'WALK_BACK';
         act.phaseTimer = 0;

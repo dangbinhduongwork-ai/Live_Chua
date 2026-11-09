@@ -580,29 +580,45 @@ class TempleAudioSystem {
 
     const categoryBlessings = {
       gia_dinh: [
-        `Cảm tạ Phật tử ${cleanName}. Chúc gia đình thí chủ bình an, sum vầy hạnh phúc.`,
-        `A Di Đà Phật. Chúc gia đạo Phật tử ${cleanName} luôn ấm êm, mạnh khỏe.`
+        `Chúc gia đình Phật tử ${cleanName} bình an mạnh khỏe, trên thuận dưới hòa, nhà cửa ấm êm, vạn sự hạnh phúc.`,
+        `Chúc đại gia đình ${cleanName} cha mẹ trường thọ, con cháu thảo hiền, gia đạo hưng long, phúc lộc đầy nhà.`,
+        `Chúc gia đạo Phật tử ${cleanName} sum vầy đầm ấm, tai qua nạn khỏi, sức khỏe dồi dào, trọn đời an vui.`,
+        `Chúc cả nhà Phật tử ${cleanName} hòa thuận yêu thương, vạn điều may mắn, bình an vô sự, phúc đức viên mãn.`
       ],
       su_nghiep: [
-        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ sự nghiệp hanh thông, tài lộc dồi dào.`,
-        `A Di Đà Phật. Chúc Phật tử ${cleanName} công danh thăng tiến, vạn sự thành tựu.`
+        `Chúc Phật tử ${cleanName} sự nghiệp hanh thông, công danh thăng tiến, tài lộc dồi dào, vạn sự thành công.`,
+        `Chúc Phật tử ${cleanName} buôn may bán đắt, tiền vào như nước, quý nhân phù trợ, làm đâu thắng đó.`,
+        `Chúc Phật tử ${cleanName} công việc thuận lợi, lộc tài vượng phát, sự nghiệp vững vàng, phú quý vinh hoa.`,
+        `Chúc Phật tử ${cleanName} vạn sự hanh thông, tài lộc tấn tới, đại cát đại lợi, mã đáo thành công.`
       ],
       tinh_yeu: [
-        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ tình duyên viên mãn, trăm năm hạnh phúc.`,
-        `A Di Đà Phật. Chúc Phật tử ${cleanName} thiện duyên gắn kết, hạnh phúc trọn vẹn.`
+        `Chúc Phật tử ${cleanName} tình duyên viên mãn, đôi lứa xứng đôi, gắn kết bền chặt, trăm năm hạnh phúc.`,
+        `Chúc Phật tử ${cleanName} sớm gặp ý trung nhân, tình cảm ngọt ngào, yêu thương trọn vẹn, bạc đầu giai lão.`,
+        `Chúc Phật tử ${cleanName} nhân duyên tốt đẹp, tâm đầu ý hợp, tình sâu nghĩa nặng, hạnh phúc viên thành.`,
+        `Chúc Phật tử ${cleanName} đường tình suôn sẻ, người thương chung thủy, sắc son một lòng, ấm êm trọn đời.`
       ],
       hoc_hanh: [
-        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ trí tuệ sáng suốt, thi cử đỗ đạt.`,
-        `A Di Đà Phật. Chúc Phật tử ${cleanName} học hành tấn tới, bảng vàng vinh quy.`
+        `Chúc Phật tử ${cleanName} trí tuệ sáng suốt, học một hiểu mười, thi cử đỗ đạt, bảng vàng vinh quy.`,
+        `Chúc Phật tử ${cleanName} học hành tấn tới, tâm trí minh mẫn, vượt mọi kỳ thi, điểm cao rực rỡ.`,
+        `Chúc Phật tử ${cleanName} đèn sách thành tài, thi đâu đậu đó, công thành danh toại, tương lai rộng mở.`,
+        `Chúc Phật tử ${cleanName} thông minh đĩnh ngộ, vững bước trường thi, đạt kết quả cao, rạng danh gia đình.`
       ],
       binh_an: [
-        `Cảm tạ Phật tử ${cleanName}. Chúc thí chủ thân tâm an lạc, vạn sự bình an.`,
-        `A Di Đà Phật. Chúc Phật tử ${cleanName} sức khỏe dồi dào, vạn sự cát tường.`
+        `Chúc Phật tử ${cleanName} thân tâm an lạc, sức khỏe dồi dào, tai qua nạn khỏi, vạn sự bình an.`,
+        `Chúc Phật tử ${cleanName} bách bệnh tiêu trừ, tâm luôn thanh tịnh, gặp dữ hóa lành, vạn sự cát tường.`,
+        `Chúc Phật tử ${cleanName} đời sống an nhiên, phước lành hội tụ, mọi điều suôn sẻ, sở cầu như ý.`,
+        `Chúc Phật tử ${cleanName} thượng lộ bình an, khỏe mạnh trường thọ, gia đạo yên vui, phúc lộc vẹn toàn.`
       ]
     };
 
     const list = categoryBlessings[category] || categoryBlessings.binh_an;
-    const blessingText = list[Math.floor(Math.random() * list.length)];
+    if (!this.lastBlessingIdx) this.lastBlessingIdx = {};
+    let idx = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && idx === this.lastBlessingIdx[category]) {
+      idx = (idx + 1) % list.length;
+    }
+    this.lastBlessingIdx[category] = idx;
+    const blessingText = list[idx];
 
     // Phát sự kiện để giao diện hiển thị dòng phụ đề lời chúc bình an và làm sáng ô lời chúc tương ứng
     window.dispatchEvent(new CustomEvent('blessing-spoken', {
